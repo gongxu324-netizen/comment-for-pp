@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPKrit × GUCCI — Milan Fashion Week Compliment Generator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(135deg, #1b1b1b 0%, #4a3728 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .container { width: 100%; max-width: 560px; }
+  h1 { color: #e8c87e; text-align: center; font-size: 26px; margin-bottom: 8px; }
+  .subtitle { color: rgba(255,255,255,.7); text-align: center; font-size: 14px; margin-bottom: 28px; }
+  .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+  .tab {
+    flex: 1; padding: 12px; text-align: center; border-radius: 12px;
+    background: rgba(255,255,255,.12); color: rgba(255,255,255,.75);
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: background .2s, color .2s; border: 1px solid transparent;
+  }
+  .tab.active { background: rgba(232,200,126,.18); color: #e8c87e; border-color: rgba(232,200,126,.5); }
+  .tab .hash { display: block; font-size: 10px; font-weight: 400; opacity: .7; margin-top: 2px; }
+  .stats { color: rgba(232,200,126,.8); text-align: center; font-size: 12px; margin-bottom: 20px; }
+  .btn {
+    display: block; width: 100%; padding: 14px;
+    background: #e8c87e; color: #1b1b1b; font-size: 16px; font-weight: 600;
+    border: none; border-radius: 12px; cursor: pointer;
+    transition: transform .15s, box-shadow .15s; margin-bottom: 20px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.3); }
+  .card {
+    background: rgba(255,255,255,.95); border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 14px; cursor: pointer;
+    transition: transform .15s, background .2s; position: relative;
+  }
+  .card:hover { transform: scale(1.02); background: #fff; }
+  .card .index { font-size: 12px; color: #999; margin-bottom: 4px; }
+  .card .tag {
+    display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 8px;
+    margin-left: 6px; vertical-align: 1px;
+  }
+  .tag.short { background: #e3f2fd; color: #1565c0; }
+  .tag.medium { background: #fff3e0; color: #e65100; }
+  .tag.long { background: #f3e5f5; color: #6a1b9a; }
+  .card .text { font-size: 16px; color: #333; line-height: 1.6; word-break: break-word; margin-top: 4px; }
+  .card .text b { color: #8a6d3b; }
+  .card .tip {
+    position: absolute; right: 14px; top: 14px;
+    font-size: 12px; color: #8a6d3b; opacity: 0; transition: opacity .2s;
+  }
+  .card.copied { background: #e8f5e9; }
+  .card.copied .tip { opacity: 1; }
+  .toast {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #323232; color: #fff; padding: 10px 22px; border-radius: 20px;
+    font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+<base target="_blank">
+<base target="_blank">
+</head>
+<body>
+<div class="container">
+  <h1>✨ PPKrit × GUCCI — Milan Fashion Week ✨</h1>
+  <p class="subtitle">Every line contains PPKRIT / PPkrit & GUCCI variants — tap a card to copy.<br>Switch between the IG/TT and X modules above.</p>
+  <div class="tabs">
+    <div class="tab active" id="tabIG" data-mode="ig">📸 IG / TT<span class="hash">original format</span></div>
+    <div class="tab" id="tabX" data-mode="x">𝕏 X<span class="hash">+ #GUCCIxPPKRIT #Gucci #PPKritt</span></div>
+  </div>
+  <p class="stats" id="stats"></p>
+  <button class="btn" id="refreshBtn">🎲 Refresh</button>
+  <div id="list"></div>
+</div>
+<div class="toast" id="toast">Copied ✓</div>
+
+<script>
+// ===== Text pools (short one-liners / medium paragraphs / fragments for long form) =====
+const DATA = {
+  SHORT: [
+    "{emoji} {name} at {brand} Milan — absolutely iconic.",
+    "{emoji} {name} x {brand} in Milan, pure perfection.",
+    "{emoji} Nobody does {brand} like {name}. Nobody.",
+    "{emoji} {name} in {brand} Milan: flawless. 🔥",
+    "{emoji} Milan belongs to {name} and {brand} this season.",
+    "{emoji} {name} just raised the bar for {brand} Milan.",
+    "{emoji} {brand} found its perfect muse in {name}.",
+    "{emoji} {name} in Milan, wearing {brand} like it was tailored by angels.",
+    "{emoji} Simply stunning — {name} and {brand} in Milan. 🤍",
+    "{emoji} {name} x {brand}: the moment of Milan Fashion Week.",
+    "{emoji} Milan has a new king, and his name is {name}. 👑",
+    "{emoji} {brand} on {name} in Milan — a match made in fashion heaven.",
+    "{emoji} {name} owned every camera at {brand} Milan.",
+    "{emoji} This {brand} look on {name}? Perfection. ✨",
+    "{emoji} {name} in {brand}: effortless, elegant, iconic.",
+    "{emoji} Milan Fashion Week's best moment: {name} in {brand}.",
+    "{emoji} {name} wearing {brand} in Milan is everything. 🫶",
+    "{emoji} One word for {name} at {brand} Milan: legendary.",
+    "{emoji} {brand} Milan just got its brightest star — {name}.",
+    "{emoji} {name} and {brand} together? Instant classic.",
+    "{emoji} Absolutely captivated by {name} in {brand} at Milan. 😍",
+    "{emoji} {name} in {brand} Milan — the fit, the aura, the everything.",
+    "{emoji} No one is doing it like {name} in {brand}.",
+    "{emoji} {name} stole the spotlight at {brand}'s Milan show. 🔥",
+    "{emoji} {brand} x {name} in Milan = perfection squared.",
+    "{emoji} Milan's front row agrees: {name} in {brand} is elite.",
+    "{emoji} {name} looked like a dream in {brand} at Milan. 🤍",
+    "{emoji} This is {name}'s world, {brand} just dresses it. 👑",
+    "{emoji} {name} in {brand} Milan — short, sweet, iconic.",
+    "{emoji} The way {name} wears {brand} should be studied. 📚",
+    "{emoji} {brand} Milan's MVP: {name}. Obviously.",
+    "{emoji} {name} + {brand} + Milan = the perfect fashion equation.",
+    "{emoji} Elegance has a name: {name}. Proof: {brand} Milan.",
+    "{emoji} {name} in {brand}: Milan's most talked-about look. 🥂",
+    "{emoji} Watching {name} in {brand} at Milan never gets old.",
+    "{emoji} {name} is the moment. {brand} Milan confirmed it.",
+    "{emoji} {brand} and {name} in Milan — chemistry you can't fake.",
+    "{emoji} {name} at {brand} Milan: 10/10, no notes.",
+    "{emoji} Pure class — {name} in {brand} in the Milan front row.",
+    "{emoji} {name} makes {brand} look even more {brand}. ✨"
+  ],
+  MEDIUM: [
+    "{emoji} {name}'s appearance at Milan Fashion Week was absolutely stunning — he was simply born for {brand}.",
+    "{emoji} At Milan Fashion Week, the chemistry between {name} and {brand} was a perfect ten; every move radiated aristocratic elegance.",
+    "{emoji} The moment {name} stepped into {brand}'s Milan show, the whole fashion world held its breath.",
+    "{emoji} Wearing {brand} with this level of sophistication, {name}'s Milan Fashion Week appearance was truly impeccable.",
+    "{emoji} {name} was in god-tier form at Milan Fashion Week, his aura blending seamlessly with {brand}'s DNA.",
+    "{emoji} In the Milan front row, {name} proved with sheer presence what a true two-way match with {brand} looks like.",
+    "{emoji} {name} sharing the frame with {brand} at Milan Fashion Week is, hands down, the most gorgeous sight of the year.",
+    "{emoji} Watching {name} in {brand} at Milan Fashion Week feels like watching a living editorial — every frame is a masterpiece.",
+    "{emoji} {name}'s Milan Fashion Week interpretation of {brand}'s retro elegance was nothing short of flawless.",
+    "{emoji} From styling to presence, the fit between {name} and {brand} at Milan Fashion Week was textbook perfection.",
+    "{emoji} At Milan Fashion Week, {name} was a living {brand} campaign — graceful, poised, and utterly captivating.",
+    "{emoji} Dressed in {brand} at Milan Fashion Week, {name} served pure luxury and completely slayed the front row.",
+    "{emoji} You have to hand it to {brand}'s eye for talent — {name}'s Milan Fashion Week appearance is the ultimate proof.",
+    "{emoji} Every look {name} served in Milan came straight out of {brand}'s rulebook — full aura, zero flaws.",
+    "{emoji} Milan Fashion Week shone even brighter because of {name}; his essence and {brand}'s soul melted into one.",
+    "{emoji} {name} doesn't just wear {brand} — he reads it, understands it, and elevates it with genuine fashion intellect.",
+    "{emoji} What sets {name} apart is his eye: he treats {brand} not as a label, but as a language he speaks fluently.",
+    "{emoji} Every {brand} look {name} puts together reveals a sharp editorial mind — this is fashion understanding, not just styling.",
+    "{emoji} His grasp of silhouette, texture and color is remarkable — {name} interprets {brand} like a true fashion scholar.",
+    "{emoji} {name}'s styling choices reflect a deep, personal fashion philosophy — {brand} simply found its perfect narrator.",
+    "{emoji} It's rare to see someone engage with fashion this thoughtfully; {name} brings genuine critique and culture to {brand}.",
+    "{emoji} {name} understands that fashion is storytelling, and {brand} on him tells the most compelling story in the room.",
+    "{emoji} From accessories to proportions, {name}'s attention to detail shows a refined fashion sensibility worthy of {brand}.",
+    "{emoji} {name} approaches {brand} with the eye of a curator — selective, precise, and always ahead of the trend.",
+    "{emoji} {name} has earned his seat at fashion's top table — Milan's front row for {brand} is exactly where he belongs.",
+    "{emoji} The fashion world has spoken: {name} in {brand} is one of the most recognized and celebrated pairings this season.",
+    "{emoji} Editors, critics, and designers alike agree — {name}'s Milan moment with {brand} marked his arrival as a global fashion figure.",
+    "{emoji} {name} is no longer just a guest of fashion; with {brand}, he has become one of its defining voices.",
+    "{emoji} Industry recognition follows {name} naturally — {brand} and Milan simply confirmed what fashion insiders already knew.",
+    "{emoji} From Bangkok to Milan, {name} has built a fashion reputation on taste and vision — {brand} is lucky to have him.",
+    "{emoji} Fashion houses don't invite just anyone to Milan; {name}'s presence in {brand} reflects the industry's deep respect for him.",
+    "{emoji} {name} has become a fixture on the fashion calendar, and his {brand} appearances are now among the week's most anticipated moments.",
+    "{emoji} Critics called it one of the week's standout looks — {name} in {brand} is fashion recognition earned, not given.",
+    "{emoji} In a room full of fashion elites, {name} stood out effortlessly — {brand} on him drew every camera and every compliment.",
+    "{emoji} The cameras couldn't get enough of {name} at {brand}'s Milan show, and honestly, neither can we.",
+    "{emoji} {name} brought quiet luxury to a whole new level at {brand} Milan — understated, unforgettable.",
+    "{emoji} There's a reason {brand} keeps welcoming {name} back to Milan: he understands the assignment every single time.",
+    "{emoji} {name}'s Milan look for {brand} was a masterclass in modern elegance — minimal effort, maximum impact.",
+    "{emoji} Few can carry {brand}'s heritage with such ease; {name} at Milan made it look like second nature.",
+    "{emoji} {name} walked into {brand}'s Milan show and instantly became the headline of the entire fashion week.",
+    "{emoji} The details on {name}'s {brand} look in Milan — every stitch, every accessory — spoke volumes about his fashion IQ.",
+    "{emoji} {name} in {brand} at Milan was the definition of quiet confidence — no excess, just pure style.",
+    "{emoji} Milan Fashion Week produced many moments, but {name} in {brand} was the one everyone will remember.",
+    "{emoji} What {name} brings to {brand} isn't just star power — it's a genuine understanding of the house's soul.",
+    "{emoji} As {brand}'s ambassador, {name} didn't just attend the Milan show — he defined its atmosphere.",
+    "{emoji} {name} represented {brand} in Milan with the poise of a true house ambassador.",
+    "{emoji} There's a reason {brand} chose {name} as ambassador — his Milan appearance said it all.",
+    "{emoji} {name} in the {brand} front row at Milan: the ambassador the house deserves.",
+    "{emoji} Appointed ambassador and immediately iconic — {name}'s {brand} Milan debut was flawless.",
+  ],
+  OPENERS: [
+    "Everyone is still talking about it",
+    "Let the record show",
+    "If elegance had a face",
+    "Fashion editors, take notes",
+    "In a season full of highlights",
+    "Honestly, it needs to be said",
+    "No matter how many shows you've seen",
+    "When the lights dimmed for the Milan show",
+    "Some fashion moments fade, but not this one",
+    "Call it chemistry, call it destiny",
+    "The front row knew it first",
+    "Style archives will remember this",
+    "Between the flashes and the applause",
+    "If Milan had a crown this season",
+    "Rarely does a look feel this effortless",
+    "Beyond the headlines and the hashtags",
+    "For anyone still doubting his fashion credentials",
+    "There's a difference between wearing clothes and wearing a story",
+    "Weeks later, the impact is still undeniable",
+    "The definition of a perfect brand pairing"
+  ],
+  CORES: [
+    "{name}'s appearance at {brand}'s Milan show proved he's operating on another level entirely",
+    "{name} delivered a masterclass in presence at the {brand} Milan show",
+    "the way {name}, as {brand}'s ambassador, embodied the house's codes in Milan felt almost effortless",
+    "{name} at {brand} Milan showed exactly what a modern muse looks like",
+    "every frame of {name} in {brand} at Milan could hang in a gallery",
+    "{name}'s {brand} appearance in Milan was a study in refined confidence",
+    "the synergy between {name} and {brand} in Milan was simply unmatched",
+    "{name} didn't just attend {brand}'s Milan show — he elevated it",
+    "{name} wore {brand} in Milan like the clothes were written for him",
+    "the elegance {name} brought to {brand}'s Milan show was world-class",
+    "{name}'s fashion instincts were on full display at {brand} Milan",
+    "{name} made {brand}'s Milan front row feel like his personal stage",
+    "{name}'s look at {brand} Milan balanced heritage and modernity perfectly",
+    "the poise {name} showed in {brand} at Milan is what fashion dreams are made of",
+    "{name} turned {brand}'s Milan showcase into a career-defining moment",
+    "the way {name} carries {brand} speaks to a rare kind of fashion literacy",
+    "{name}'s Milan outing in {brand} was praised from every corner of the industry",
+    "{name} and {brand} together in Milan felt less like a pairing and more like a legacy",
+    "the precision of {name}'s styling at {brand} Milan impressed even the harshest critics",
+    "{name} gave {brand}'s Milan show its most graceful front-row moment of the week",
+    "the sophistication {name} brought to {brand} in Milan was simply magnetic",
+    "{name}'s command of {brand}'s aesthetic in Milan proved his fashion fluency",
+    "in {brand} at Milan, {name} looked every bit the global fashion figure he's become",
+    "{name}'s presence at {brand} Milan reminded everyone why the industry adores him",
+    "the silhouette, the attitude, the aura — {name} nailed every note of {brand} in Milan",
+    "{name} interpreted {brand}'s vision in Milan with a maturity beyond his years",
+    "the confidence {name} exuded in {brand} at Milan was pure couture energy",
+    "{name}'s Milan moment in {brand} will be referenced for seasons to come",
+    "what {name} brought to {brand}'s Milan front row was equal parts charm and couture",
+    "{name} proved in Milan that {brand} and he are simply meant to be",
+    "the industry consensus was instant: {name} in {brand} at Milan was elite",
+    "{name}'s {brand} look in Milan showed restraint, taste, and perfect timing",
+    "from arrival to exit, {name} owned {brand}'s Milan narrative",
+    "{name} made {brand}'s Milan showing feel personal, poetic, and powerful",
+    "the fashion press agreed — {name}'s {brand} moment in Milan was front-page material",
+    "{name}, sitting front row for {brand} in Milan, was a reminder that true style needs no embellishment",
+    "{name} didn't chase the spotlight at {brand} Milan; the spotlight chased him",
+    "the harmony between {name}'s persona and {brand}'s identity in Milan was pitch-perfect",
+    "{name}'s take on {brand} in Milan was fresh, refined, and completely his own",
+    "Milan saw many faces, but {name} in {brand} was the one nobody forgot",
+    "the quiet power {name} brought to {brand} in Milan is what real fashion authority looks like",
+    "{name}'s Milan appearance in {brand} earned praise from critics and fans alike",
+    "in one appearance, {name} summed up everything {brand} stands for in Milan",
+    "{name}'s fashion sensibility shone brightest at {brand}'s Milan showcase",
+    "the {brand} show in Milan had one undisputed star in the front row, and it was {name}",
+    "as {brand}'s ambassador, {name} honored the house's heritage in Milan while making every look unmistakably his own",
+    "{name} carried the weight of {brand} ambassadorship in Milan with remarkable ease and grace",
+    "choosing {name} as ambassador was a masterstroke — his Milan presence elevated {brand}'s entire week",
+    "{name} proved in Milan why {brand} trusts him as ambassador: taste, poise, and an instinct for the house's codes",
+    "front row at {brand} Milan, ambassador {name} looked every bit the house's perfect representative"
+  ],
+  CLOSERS: [
+    "and the fashion world is better for it. {emoji}",
+    "— this is what iconic looks like. {emoji}",
+    "and Milan simply wasn't ready. {emoji}",
+    "proof that taste like his can't be manufactured. {emoji}",
+    "a moment that will live in fashion history. {emoji}",
+    "the kind of elegance that needs no translation. {emoji}",
+    "and honestly? We're still not over it. {emoji}",
+    "that's not just fashion — that's art. {emoji}",
+    "and the front row felt it too. {emoji}",
+    "a standing ovation written in every headline. {emoji}",
+    "and the industry took notice. {emoji}",
+    "this is why {brand} and {name} are a perfect match. {emoji}"
+  ]
+};
+
+const NAME_VARIANTS = ["PPKRIT", "PPkrit"];
+const BRAND_VARIANTS = ["GUCCI", "Gucci", "@GUCCI", "GUCCI."];
+const EMOJIS = ["✨", "🔥", "👑", "🤍", "💚❤️", "🖤", "😍", "🥂", "🌟", "💫", "🫶", "👏"];
+const COUNT = 5;
+const list = document.getElementById("list");
+const toast = document.getElementById("toast");
+let toastTimer = null;
+
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+function fill(t) {
+  return t.replace(/\{name\}/g, pick(NAME_VARIANTS))
+          .replace(/\{brand\}/g, pick(BRAND_VARIANTS))
+          .replace(/\{emoji\}/g, () => pick(EMOJIS));
+}
+
+// ===== Generator: mix of short / medium / long, session-level dedup =====
+const seen = new Set();
+let mode = "ig"; // "ig" = IG/TT module, "x" = X module (every comment carries hashtags)
+const X_TAGS = "#GUCCIxPPKRIT #Gucci #PPKritt";
+
+function generateOne() {
+  const r = Math.random();
+  let item;
+  if (r < 0.35) item = { tag: "short", text: fill(pick(DATA.SHORT)) };
+  else if (r < 0.70) item = { tag: "medium", text: fill(pick(DATA.MEDIUM)) };
+  else {
+    const sentence = pick(DATA.OPENERS) + ", " +
+                     fill(pick(DATA.CORES)) + ", " +
+                     fill(pick(DATA.CLOSERS));
+    item = { tag: "long", text: pick(EMOJIS) + " " + sentence.charAt(0).toUpperCase() + sentence.slice(1) };
+  }
+  if (mode === "x") item.text += " " + X_TAGS;
+  return item;
+}
+
+function pickRandom() {
+  const out = [];
+  let guard = 0;
+  while (out.length < COUNT && guard < 200) {
+    guard++;
+    const item = generateOne();
+    if (seen.has(item.text)) continue;
+    seen.add(item.text);
+    out.push(item);
+  }
+  return out;
+}
+
+// Estimated unique combinations: (short+medium)*2*4 + openers*cores*closers*2*4
+const totalUnique = (DATA.SHORT.length + DATA.MEDIUM.length) * 2 * 4
+                  + DATA.OPENERS.length * DATA.CORES.length * DATA.CLOSERS.length * 2 * 4;
+document.getElementById("stats").textContent =
+  DATA.SHORT.length + DATA.MEDIUM.length + " templates + " +
+  (DATA.OPENERS.length * DATA.CORES.length * DATA.CLOSERS.length) + " long-form combos ≈ " +
+  totalUnique.toLocaleString() + " unique comments possible";
+
+// ===== Render =====
+function render() {
+  list.innerHTML = "";
+  pickRandom().forEach((item, i) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    const highlighted = item.text
+      .replace(/PPKRIT|PPkrit/g, m => `<b>${m}</b>`)
+      .replace(/@?GUCCI\.?|Gucci/g, m => `<b>${m}</b>`);
+    card.innerHTML = `<div class="index">#${i + 1}<span class="tag ${item.tag}">${item.tag}</span></div>`
+      + `<div class="text">${highlighted}</div><div class="tip">Tap to copy</div>`;
+    card.addEventListener("click", () => copyText(item.text, card));
+    list.appendChild(card);
+  });
+}
+
+// ===== Tap to copy =====
+async function copyText(text, card) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  card.classList.add("copied");
+  card.querySelector(".tip").textContent = "Copied ✓";
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+    card.classList.remove("copied");
+    card.querySelector(".tip").textContent = "Tap to copy";
+  }, 1500);
+}
+
+document.getElementById("refreshBtn").addEventListener("click", render);
+
+// ===== Module switching (IG/TT <-> X) =====
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    if (mode === tab.dataset.mode) return;
+    mode = tab.dataset.mode;
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === tab));
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>
